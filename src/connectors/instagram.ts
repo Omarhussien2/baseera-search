@@ -10,7 +10,7 @@ export class InstagramConnector extends BaseConnector {
 
   async search(query: SearchQuery): Promise<MonitoringItem[]> {
     const results: MonitoringItem[] = [];
-    const rawResults = await bingSearch(`site:instagram.com ${query.keywords.join(' ')}`);
+    const rawResults = await bingSearch(`instagram ${query.keywords.join(' ')}`);
     for (const raw of rawResults) {
       const sentimentResult = await analyzeSentimentAsync(raw.snippet, query.aiSettings);
       results.push({

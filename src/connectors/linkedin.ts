@@ -10,7 +10,7 @@ export class LinkedInConnector extends BaseConnector {
 
   async search(query: SearchQuery): Promise<MonitoringItem[]> {
     const results: MonitoringItem[] = [];
-    const rawResults = await bingSearch(`site:linkedin.com/posts ${query.keywords.join(' ')}`);
+    const rawResults = await bingSearch(`linkedin ${query.keywords.join(' ')}`);
     for (const raw of rawResults) {
       const sentimentResult = await analyzeSentimentAsync(raw.snippet, query.aiSettings);
       results.push({

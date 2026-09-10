@@ -10,7 +10,7 @@ export class TwitterConnector extends BaseConnector {
 
   async search(query: SearchQuery): Promise<MonitoringItem[]> {
     const results: MonitoringItem[] = [];
-    const rawResults = await bingSearch(`(site:x.com OR site:twitter.com) ${query.keywords.join(' ')}`);
+    const rawResults = await bingSearch(`twitter x.com ${query.keywords.join(' ')}`);
     
     for (const raw of rawResults) {
       const sentimentResult = await analyzeSentimentAsync(raw.snippet, query.aiSettings);
