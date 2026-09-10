@@ -15,6 +15,7 @@ async function ddgLiteSearch(searchString: string): Promise<{title: string; snip
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: `q=${encodeURIComponent(searchString)}`,
+      cache: 'no-store',
     });
     
     const html = await response.text();
