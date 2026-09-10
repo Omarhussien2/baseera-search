@@ -36,3 +36,5 @@ next-env.d.ts
 
 # delegation runs
 .delegate_runs/
+
+.vercel

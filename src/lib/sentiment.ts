@@ -31,3 +31,96 @@ export function analyzeSentiment(text: string): { sentiment: Sentiment; confiden
   
   return { sentiment: 'neutral', confidence: 0.8 };
 }
+
+/**
+ * Async sentiment analysis with optional AI provider (e.g., Google Gemini).
+ * Falls back to heuristic analysis if AI provider fails or is not configured.
+ */
+export async function analyzeSentimentAsync(
+  text: string,
+  aiSettings?: { provider: string; apiKey?: string }
+): Promise<{ sentiment: Sentiment; confidence: number }> {
+  if (!text || text.trim() === '') {
+    return analyzeSentiment(text);
+  }
+
+  if (aiSettings?.provider === 'gemini' && aiSettings.apiKey && aiSettings.apiKey.trim() !== '') {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${aiSettings.apiKey.trim()}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: `Analyze the sentiment of this Arabic text. Reply with strictly one word: positive, negative, or neutral. Text: ${text}`,
+                  },
+                ],
+              },
+            ],
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toLowerCase() || '';
+
+        if (rawText.includes('positive')) {
+          return { sentiment: 'positive', confidence: 0.95 };
+        } else if (rawText.includes('negative')) {
+          return { sentiment: 'negative', confidence: 0.95 };
+        } else if (rawText.includes('neutral')) {
+          return { sentiment: 'neutral', confidence: 0.95 };
+        }
+      }
+    } catch (error) {
+      console.error('Gemini sentiment analysis error, falling back to heuristic:', error);
+    }
+  } else if (aiSettings?.provider === 'tokenrouter') {
+    if (aiSettings.apiKey && aiSettings.apiKey.trim() !== '') {
+      try {
+        const response = await fetch('https://api.tokenrouter.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${aiSettings.apiKey.trim()}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'z-ai/glm-5.3-free',
+            messages: [
+              {
+                role: 'user',
+                content: `Analyze the sentiment of this Arabic text. Reply with strictly ONE english word: positive, negative, or neutral. Do not add any other text. Text: ${text}`,
+              },
+            ],
+            temperature: 0,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const rawText = data?.choices?.[0]?.message?.content?.trim().toLowerCase() || '';
+
+          if (rawText.includes('positive')) {
+            return { sentiment: 'positive', confidence: 0.95 };
+          } else if (rawText.includes('negative')) {
+            return { sentiment: 'negative', confidence: 0.95 };
+          } else if (rawText.includes('neutral')) {
+            return { sentiment: 'neutral', confidence: 0.95 };
+          }
+        }
+      } catch (error) {
+        console.error('TokenRouter sentiment analysis error, falling back to heuristic:', error);
+      }
+    }
+  }
+
+  return analyzeSentiment(text);
+}
+

@@ -1,7 +1,7 @@
 import { BaseConnector } from './base';
 import { Platform, MonitoringItem, SearchQuery } from '@/types';
 import * as cheerio from 'cheerio';
-import { analyzeSentiment } from '@/lib/sentiment';
+import { analyzeSentimentAsync } from '@/lib/sentiment';
 
 export class WebConnector extends BaseConnector {
   platform: Platform = 'web';
@@ -30,9 +30,8 @@ export class WebConnector extends BaseConnector {
       const html = await response.text();
       const $ = cheerio.load(html);
       
-      $('.result').each((i, el) => {
-        if (i >= 15) return; // هنجيب أول 15 نتيجة للسرعة
-        
+      const elements = $('.result').toArray().slice(0, 15);
+      for (const el of elements) {
         const title = $(el).find('.result__title').text().trim();
         const snippet = $(el).find('.result__snippet').text().trim();
         let url = $(el).find('.result__url').attr('href') || '';
@@ -41,7 +40,7 @@ export class WebConnector extends BaseConnector {
         if (url.startsWith('//')) url = 'https:' + url;
 
         if (title && snippet) {
-          const sentimentResult = analyzeSentiment(snippet);
+          const sentimentResult = await analyzeSentimentAsync(snippet, query.aiSettings);
           
           results.push({
             id: this.generateId(),
@@ -64,7 +63,7 @@ export class WebConnector extends BaseConnector {
             metadata: {}
           });
         }
-      });
+      }
       
     } catch (e) {
       console.error('[WebConnector] Search failed:', e);

@@ -89,6 +89,10 @@ export interface SearchQuery {
   language?: string;
   limit?: number;
   offset?: number;
+  aiSettings?: {
+    provider: string;
+    apiKey?: string;
+  };
 }
 
 export interface SearchResult {

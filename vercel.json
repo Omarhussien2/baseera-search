@@ -1,0 +1,1 @@
+{ "name": "baseera-search", "version": 2, "buildCommand": "npm run build", "outputDirectory": ".next" }

@@ -1,7 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import { Settings, Hash, Users, Camera, Globe, BrainCircuit, Key, CheckCircle2, Link2, MessageSquare, Briefcase } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const platforms = [
   { id: 'twitter', name: 'تويتر (X)', icon: Hash, color: 'text-gray-900 dark:text-gray-100', connected: false },
@@ -13,7 +13,21 @@ const platforms = [
 
 export default function SettingsPage() {
   const [aiProvider, setAiProvider] = useState('heuristic');
+  const [apiKey, setApiKey] = useState('');
   const [connecting, setConnecting] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedProvider = localStorage.getItem('aiProvider');
+    const savedKey = localStorage.getItem('apiKey');
+    if (savedProvider) setAiProvider(savedProvider);
+    if (savedKey) setApiKey(savedKey);
+  }, []);
+
+  const handleSaveSettings = () => {
+    localStorage.setItem('aiProvider', aiProvider);
+    localStorage.setItem('apiKey', apiKey);
+    alert('تم حفظ الإعدادات بنجاح! 💾');
+  };
 
   const handleConnect = async (id: string) => {
     setConnecting(id);
@@ -98,7 +112,26 @@ export default function SettingsPage() {
         </h2>
         <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-gray-800 space-y-6">
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Select dropdown for AI Providers */}
+          <div className="space-y-2">
+            <label htmlFor="ai-provider-select" className="block text-sm font-bold text-gray-700 dark:text-gray-300">
+              اختر المزود (AI Providers)
+            </label>
+            <select
+              id="ai-provider-select"
+              aria-label="AI Providers"
+              value={aiProvider}
+              onChange={(e) => setAiProvider(e.target.value)}
+              className="w-full md:w-auto px-4 py-2.5 border-2 border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 font-medium text-gray-900 dark:text-white focus:outline-none focus:border-brand-500 transition-colors"
+            >
+              <option value="heuristic">قاموس الكلمات (أساسي)</option>
+              <option value="gemini">Google Gemini API</option>
+              <option value="tokenrouter">TokenRouter (Free GLM Models)</option>
+              <option value="ollama">Local AI (Ollama)</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <label className={`cursor-pointer border-2 rounded-2xl p-5 transition-all ${aiProvider === 'heuristic' ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-100 dark:border-gray-800 hover:border-gray-200'}`}>
               <input type="radio" name="ai" value="heuristic" checked={aiProvider === 'heuristic'} onChange={() => setAiProvider('heuristic')} className="sr-only" />
               <h3 className="font-bold text-gray-900 dark:text-white mb-1">قاموس الكلمات (أساسي)</h3>
@@ -109,6 +142,12 @@ export default function SettingsPage() {
               <input type="radio" name="ai" value="gemini" checked={aiProvider === 'gemini'} onChange={() => setAiProvider('gemini')} className="sr-only" />
               <h3 className="font-bold text-gray-900 dark:text-white mb-1">Google Gemini API</h3>
               <p className="text-xs text-gray-500 font-medium leading-relaxed">دقة ممتازة وبيدعم اللهجات العربية، بيحتاج مفتاح API</p>
+            </label>
+
+            <label className={`cursor-pointer border-2 rounded-2xl p-5 transition-all ${aiProvider === 'tokenrouter' ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-100 dark:border-gray-800 hover:border-gray-200'}`}>
+              <input type="radio" name="ai" value="tokenrouter" checked={aiProvider === 'tokenrouter'} onChange={() => setAiProvider('tokenrouter')} className="sr-only" />
+              <h3 className="font-bold text-gray-900 dark:text-white mb-1">TokenRouter (Free GLM Models)</h3>
+              <p className="text-xs text-gray-500 font-medium leading-relaxed">نماذج GLM مجانية وسريعة عبر واجهة TokenRouter</p>
             </label>
 
             <label className={`cursor-pointer border-2 rounded-2xl p-5 transition-all ${aiProvider === 'ollama' ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-100 dark:border-gray-800 hover:border-gray-200'}`}>
@@ -127,7 +166,9 @@ export default function SettingsPage() {
                 </div>
                 <input 
                   type="password" 
-                  placeholder={aiProvider === 'gemini' ? "AIzaSy..." : "http://localhost:11434"} 
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={aiProvider === 'gemini' ? "AIzaSy..." : aiProvider === 'tokenrouter' ? "sk-..." : "http://localhost:11434"} 
                   className="block w-full pl-4 pr-12 py-3.5 border-2 border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 focus:ring-0 focus:border-brand-500 font-medium text-gray-900 dark:text-white transition-colors"
                 />
               </div>
@@ -135,7 +176,10 @@ export default function SettingsPage() {
           )}
 
           <div className="flex justify-end pt-4">
-            <button className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-8 py-3.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity">
+            <button 
+              onClick={handleSaveSettings}
+              className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-8 py-3.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity"
+            >
               حفظ الإعدادات 💾
             </button>
           </div>

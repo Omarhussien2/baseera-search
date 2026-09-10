@@ -1,38 +1,33 @@
-import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { NextRequest, NextResponse } from 'next/server';
 
-const execAsync = promisify(exec);
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { platform } = await req.json();
-    
+    const body = await req.json();
+    const { platform } = body;
+
     if (!platform) {
-      return NextResponse.json({ error: 'Platform is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Platform is required' }, { status: 400 });
     }
 
-    // This simulates calling the agent-reach login tools in the background.
-    // In a real environment, this opens a browser for the user to auth.
-    console.log(`[API] Initiating auth flow for ${platform}...`);
+    const microserviceUrl = process.env.AGENT_REACH_URL || 'https://gent-reach-service.onrender.com';
     
-    // Command depends on the platform and what agent-reach supports.
-    // We run this detached or just wait for it to complete.
-    let cmd = '';
-    if (platform === 'twitter') cmd = 'echo "Simulating agent-reach login twitter"';
-    else if (platform === 'facebook') cmd = 'echo "Simulating agent-reach login facebook"';
-    else cmd = `echo "Simulating login for ${platform}"`;
+    try {
+      const response = await fetch(`${microserviceUrl}/api/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform }),
+      });
 
-    const { stdout, stderr } = await execAsync(cmd);
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: `Successfully connected to ${platform}`,
-      logs: stdout 
-    });
-
+      const data = await response.json();
+      return NextResponse.json(data);
+    } catch (fetchError) {
+      console.error('Microservice unreachable:', fetchError);
+      return NextResponse.json(
+        { success: false, error: 'Agent-Reach Microservice is unreachable. Ensure the VPS is running.' },
+        { status: 503 }
+      );
+    }
   } catch (error: any) {
-    console.error('[API] Auth Error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to authenticate' }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

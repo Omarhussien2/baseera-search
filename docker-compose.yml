@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  baseera-app:
+    build: .
+    container_name: baseera-production
+    ports:
+      - "80:3000"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    volumes:
+      # مجلد دائم لحفظ الكوكيز والـ Sessions الخاصة بالمتصفحات المخفية عشان ما تضيعش لو عملنا Restart
+      - ./auth-sessions:/app/auth-sessions

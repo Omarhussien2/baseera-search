@@ -36,6 +36,8 @@ export default function SearchPage() {
     
     try {
       const keywordList = keywords.split(' ').filter(k => k.trim() !== '');
+      const aiProvider = localStorage.getItem('aiProvider') || 'heuristic';
+      const apiKey = localStorage.getItem('apiKey') || '';
       
       const response = await fetch('/api/search', {
         method: 'POST',
@@ -43,7 +45,8 @@ export default function SearchPage() {
         body: JSON.stringify({
           keywords: keywordList,
           platforms: selectedPlatforms,
-          date_range: startDate && endDate ? { from: startDate, to: endDate } : undefined
+          date_range: startDate && endDate ? { from: startDate, to: endDate } : undefined,
+          aiSettings: { provider: aiProvider, apiKey: apiKey }
         })
       });
       
