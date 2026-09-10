@@ -1,6 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-import { Settings, Hash, Users, Camera, Globe, BrainCircuit, Key, CheckCircle2, Link2, MessageSquare, Briefcase, ExternalLink, XCircle } from 'lucide-react';
+import { Settings, Hash, Users, Camera, Globe, BrainCircuit, Key, CheckCircle2, Link2, MessageSquare, Briefcase, ExternalLink, XCircle, PlaySquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface PlatformConfig {
@@ -13,6 +13,7 @@ interface PlatformConfig {
 
 const platforms: PlatformConfig[] = [
   { id: 'twitter', name: 'تويتر (X)', icon: Hash, color: 'text-gray-900 dark:text-gray-100', authUrl: 'https://x.com/i/flow/login' },
+  { id: 'youtube', name: 'يوتيوب', icon: PlaySquare, color: 'text-red-600', authUrl: 'https://accounts.google.com/' },
   { id: 'facebook', name: 'فيسبوك', icon: Users, color: 'text-blue-600', authUrl: 'https://www.facebook.com/login' },
   { id: 'instagram', name: 'إنستجرام', icon: Camera, color: 'text-pink-600', authUrl: 'https://www.instagram.com/accounts/login/' },
   { id: 'linkedin', name: 'لينكد إن', icon: Briefcase, color: 'text-blue-700', authUrl: 'https://www.linkedin.com/login' },
