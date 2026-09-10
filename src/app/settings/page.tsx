@@ -1,53 +1,100 @@
 'use client';
 import { motion } from 'framer-motion';
-import { Settings, Hash, Users, Camera, Globe, BrainCircuit, Key, CheckCircle2, Link2, MessageSquare, Briefcase } from 'lucide-react';
+import { Settings, Hash, Users, Camera, Globe, BrainCircuit, Key, CheckCircle2, Link2, MessageSquare, Briefcase, ExternalLink, XCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-const platforms = [
-  { id: 'twitter', name: 'تويتر (X)', icon: Hash, color: 'text-gray-900 dark:text-gray-100', connected: false },
-  { id: 'facebook', name: 'فيسبوك', icon: Users, color: 'text-blue-600', connected: false },
-  { id: 'instagram', name: 'إنستجرام', icon: Camera, color: 'text-pink-600', connected: false },
-  { id: 'linkedin', name: 'لينكد إن', icon: Briefcase, color: 'text-blue-700', connected: true }, // محاكاة لواحد متصل
-  { id: 'reddit', name: 'ريديت', icon: MessageSquare, color: 'text-orange-500', connected: false },
+interface PlatformConfig {
+  id: string;
+  name: string;
+  icon: any;
+  color: string;
+  authUrl: string;
+}
+
+const platforms: PlatformConfig[] = [
+  { id: 'twitter', name: 'تويتر (X)', icon: Hash, color: 'text-gray-900 dark:text-gray-100', authUrl: 'https://x.com/i/flow/login' },
+  { id: 'facebook', name: 'فيسبوك', icon: Users, color: 'text-blue-600', authUrl: 'https://www.facebook.com/login' },
+  { id: 'instagram', name: 'إنستجرام', icon: Camera, color: 'text-pink-600', authUrl: 'https://www.instagram.com/accounts/login/' },
+  { id: 'linkedin', name: 'لينكد إن', icon: Briefcase, color: 'text-blue-700', authUrl: 'https://www.linkedin.com/login' },
+  { id: 'reddit', name: 'ريديت', icon: MessageSquare, color: 'text-orange-500', authUrl: 'https://www.reddit.com/login' },
 ];
 
 export default function SettingsPage() {
   const [aiProvider, setAiProvider] = useState('heuristic');
   const [apiKey, setApiKey] = useState('');
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>(['linkedin']);
 
   useEffect(() => {
     const savedProvider = localStorage.getItem('aiProvider');
     const savedKey = localStorage.getItem('apiKey');
+    const savedPlatforms = localStorage.getItem('connectedPlatforms');
+
     if (savedProvider) setAiProvider(savedProvider);
     if (savedKey) setApiKey(savedKey);
+    if (savedPlatforms) {
+      try {
+        setConnectedPlatforms(JSON.parse(savedPlatforms));
+      } catch (e) {
+        // Fallback default
+      }
+    }
   }, []);
 
   const handleSaveSettings = () => {
     localStorage.setItem('aiProvider', aiProvider);
     localStorage.setItem('apiKey', apiKey);
+    localStorage.setItem('connectedPlatforms', JSON.stringify(connectedPlatforms));
     alert('تم حفظ الإعدادات بنجاح! 💾');
   };
 
-  const handleConnect = async (id: string) => {
-    setConnecting(id);
+  const handleConnect = async (platform: PlatformConfig) => {
+    setConnecting(platform.id);
+
+    // 1. Open the platform's real login page in a popup window for the user
+    try {
+      const popup = window.open(
+        platform.authUrl,
+        `connect_${platform.id}`,
+        'width=650,height=750,menubar=no,status=no'
+      );
+      if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        // In case popup was blocked by browser
+        window.open(platform.authUrl, '_blank');
+      }
+    } catch (e) {
+      console.warn('Could not open popup window:', e);
+    }
+
+    // 2. Notify backend to activate connector
     try {
       const res = await fetch('/api/auth/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform: id })
+        body: JSON.stringify({ platform: platform.id })
       });
       const data = await res.json();
-      if(data.success) {
-        alert(`تم الربط بنجاح مع ${id} ✅`);
-        // In a real app, update the state here to show connected=true
+
+      if (data.success) {
+        const updated = Array.from(new Set([...connectedPlatforms, platform.id]));
+        setConnectedPlatforms(updated);
+        localStorage.setItem('connectedPlatforms', JSON.stringify(updated));
+        alert(`تم فتح نافذة تسجيل الدخول وتفعيل موصل ${platform.name} بنجاح! ✅`);
       } else {
-        alert(`فشل الربط: ${data.error}`);
+        alert(`فشل الربط: ${data.error || 'خطأ غير معروف'}`);
       }
     } catch (e) {
-      alert('حدث خطأ في الاتصال بالسيرفر');
+      alert('حدث خطأ أثناء الاتصال، برجاء المحاولة مرة أخرى.');
+    } finally {
+      setConnecting(null);
     }
-    setConnecting(null);
+  };
+
+  const handleDisconnect = (id: string, name: string) => {
+    const updated = connectedPlatforms.filter(p => p !== id);
+    setConnectedPlatforms(updated);
+    localStorage.setItem('connectedPlatforms', JSON.stringify(updated));
+    alert(`تم فصل حساب ${name} بنجاح.`);
   };
 
   return (
@@ -70,36 +117,55 @@ export default function SettingsPage() {
         </h2>
         <div className="bg-white dark:bg-gray-900 rounded-3xl p-2 shadow-sm border border-gray-100 dark:border-gray-800">
           <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
-            {platforms.map((platform) => (
-              <div key={platform.id} className="flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors first:rounded-t-2xl last:rounded-b-2xl">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 bg-gray-50 dark:bg-gray-800 rounded-xl ${platform.color}`}>
-                    <platform.icon className="h-6 w-6" />
+            {platforms.map((platform) => {
+              const isConnected = connectedPlatforms.includes(platform.id);
+
+              return (
+                <div key={platform.id} className="flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors first:rounded-t-2xl last:rounded-b-2xl">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 bg-gray-50 dark:bg-gray-800 rounded-xl ${platform.color}`}>
+                      <platform.icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        {platform.name}
+                        {isConnected && (
+                          <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        )}
+                      </h3>
+                      <p className="text-sm text-gray-500 font-medium mt-1">
+                        {isConnected ? 'الحساب متصل وجاهز للرصد الحي' : 'الحساب مش متصل، اضغط لفتح نافذة تسجيل الدخول'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white">{platform.name}</h3>
-                    <p className="text-sm text-gray-500 font-medium mt-1">
-                      {platform.connected ? 'الحساب متصل وجاهز للرصد' : 'الحساب مش متصل، مش هنقدر نرصد الداتا'}
-                    </p>
-                  </div>
+                  
+                  {isConnected ? (
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 px-4 py-2 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 rounded-xl font-bold text-sm border border-green-200 dark:border-green-900/30">
+                        <CheckCircle2 className="h-4 w-4" />
+                        متصل ✅
+                      </span>
+                      <button
+                        onClick={() => handleDisconnect(platform.id, platform.name)}
+                        title="فصل الحساب"
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                      >
+                        <XCircle className="h-5 w-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => handleConnect(platform)}
+                      disabled={connecting === platform.id}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-70 shadow-sm"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      {connecting === platform.id ? 'بيفتح المتصفح... ⏳' : 'اربط حسابك 🔗'}
+                    </button>
+                  )}
                 </div>
-                
-                {platform.connected ? (
-                  <button className="flex items-center gap-2 px-5 py-2.5 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 rounded-xl font-bold text-sm border border-green-100 dark:border-green-900/30">
-                    <CheckCircle2 className="h-4 w-4" />
-                    متصل ✅
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => handleConnect(platform.id)}
-                    disabled={connecting === platform.id}
-                    className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-70 shadow-sm"
-                  >
-                    {connecting === platform.id ? 'بيفتح المتصفح... ⏳' : 'اربط حسابك 🔗'}
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </motion.section>
@@ -137,7 +203,7 @@ export default function SettingsPage() {
               <h3 className="font-bold text-gray-900 dark:text-white mb-1">قاموس الكلمات (أساسي)</h3>
               <p className="text-xs text-gray-500 font-medium leading-relaxed">سريع ومجاني، بيعتمد على قاموس مدمج بس دقته متوسطة</p>
             </label>
-            
+
             <label className={`cursor-pointer border-2 rounded-2xl p-5 transition-all ${aiProvider === 'gemini' ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-100 dark:border-gray-800 hover:border-gray-200'}`}>
               <input type="radio" name="ai" value="gemini" checked={aiProvider === 'gemini'} onChange={() => setAiProvider('gemini')} className="sr-only" />
               <h3 className="font-bold text-gray-900 dark:text-white mb-1">Google Gemini API</h3>
