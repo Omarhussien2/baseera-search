@@ -1,6 +1,6 @@
 import { BaseConnector } from './base';
 import { Platform, MonitoringItem, SearchQuery } from '@/types';
-import { ddgLiteSearch } from './web';
+import { bingSearch } from './web';
 import { analyzeSentimentAsync } from '@/lib/sentiment';
 
 export class LinkedInConnector extends BaseConnector {
@@ -10,7 +10,7 @@ export class LinkedInConnector extends BaseConnector {
 
   async search(query: SearchQuery): Promise<MonitoringItem[]> {
     const results: MonitoringItem[] = [];
-    const rawResults = await ddgLiteSearch(`site:linkedin.com/posts ${query.keywords.join(' ')}`);
+    const rawResults = await bingSearch(`site:linkedin.com/posts ${query.keywords.join(' ')}`);
     for (const raw of rawResults) {
       const sentimentResult = await analyzeSentimentAsync(raw.snippet, query.aiSettings);
       results.push({

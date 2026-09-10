@@ -3,46 +3,53 @@ import { Platform, MonitoringItem, SearchQuery } from '@/types';
 import * as cheerio from 'cheerio';
 import { analyzeSentimentAsync } from '@/lib/sentiment';
 
-// Unified DuckDuckGo Lite search that works from Vercel serverless
-async function ddgLiteSearch(searchString: string): Promise<{title: string; snippet: string; url: string}[]> {
+// Unified Bing search that works flawlessly from Vercel serverless
+export async function bingSearch(searchString: string): Promise<{title: string; snippet: string; url: string}[]> {
   const results: {title: string; snippet: string; url: string}[] = [];
   
   try {
-    const response = await fetch('https://lite.duckduckgo.com/lite/', {
-      method: 'POST',
+    const response = await fetch(`https://www.bing.com/search?q=${encodeURIComponent(searchString)}`, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept-Language': 'en-US,en;q=0.9',
       },
-      body: `q=${encodeURIComponent(searchString)}`,
-      cache: 'no-store',
+      cache: 'no-store'
     });
     
     const html = await response.text();
     const $ = cheerio.load(html);
     
-    const links = $('a.result-link').toArray();
-    const snippets = $('td.result-snippet').toArray();
-    
-    for (let i = 0; i < Math.min(links.length, 15); i++) {
-      const title = $(links[i]).text().trim();
-      const snippet = snippets[i] ? $(snippets[i]).text().trim() : '';
-      let url = $(links[i]).attr('href') || '';
+    $('li.b_algo').each((i, el) => {
+      if (i >= 15) return;
       
-      if (url.startsWith('//')) url = 'https:' + url;
+      const title = $(el).find('h2 a').text().trim();
+      let rawUrl = $(el).find('h2 a').attr('href') || '';
+      
+      let snippet = $(el).find('.b_caption p').text().trim();
+      if (!snippet) snippet = $(el).find('.b_algoSlug').text().trim();
+      
+      // Decode Bing's redirect URL if present
+      let url = rawUrl;
+      const match = rawUrl.match(/&u=a1([^&]+)/);
+      if (match && match[1]) {
+        try {
+          const b64 = match[1].replace(/-/g, '+').replace(/_/g, '/');
+          url = Buffer.from(b64, 'base64').toString();
+        } catch (e) {
+          // fallback to rawUrl
+        }
+      }
       
       if (title && (snippet || url)) {
         results.push({ title, snippet: snippet || title, url });
       }
-    }
+    });
   } catch (e) {
-    console.error('[ddgLiteSearch] Failed:', e);
+    console.error('[bingSearch] Failed:', e);
   }
   
   return results;
 }
-
-export { ddgLiteSearch };
 
 export class WebConnector extends BaseConnector {
   platform: Platform = 'web';
@@ -58,7 +65,7 @@ export class WebConnector extends BaseConnector {
     const results: MonitoringItem[] = [];
     const searchString = query.keywords.join(' ');
     
-    const rawResults = await ddgLiteSearch(searchString);
+    const rawResults = await bingSearch(searchString);
     
     for (const raw of rawResults) {
       const sentimentResult = await analyzeSentimentAsync(raw.snippet, query.aiSettings);
