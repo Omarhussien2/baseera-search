@@ -1,68 +1,29 @@
 import { BaseConnector } from './base';
 import { Platform, MonitoringItem, SearchQuery } from '@/types';
-import * as cheerio from 'cheerio';
+import { ddgLiteSearch } from './web';
 import { analyzeSentimentAsync } from '@/lib/sentiment';
 
 export class YouTubeConnector extends BaseConnector {
   platform: Platform = 'youtube';
-
   async isConfigured() { return true; }
-
-  async healthCheck() {
-    return { status: 'ok' as const };
-  }
+  async healthCheck() { return { status: 'ok' as const }; }
 
   async search(query: SearchQuery): Promise<MonitoringItem[]> {
     const results: MonitoringItem[] = [];
-    const searchString = `site:youtube.com ${query.keywords.join(' ')}`;
+    const rawResults = await ddgLiteSearch(`site:youtube.com ${query.keywords.join(' ')}`);
     
-    try {
-      const response = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchString)}`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
+    for (const raw of rawResults) {
+      const sentimentResult = await analyzeSentimentAsync(raw.snippet, query.aiSettings);
+      results.push({
+        id: this.generateId(), platform: 'youtube', content: raw.snippet,
+        title: raw.title.replace(' - YouTube', ''), author: 'قناة يوتيوب', url: raw.url,
+        published_at: new Date().toISOString(), discovered_at: new Date().toISOString(),
+        sentiment: sentimentResult.sentiment, sentiment_confidence: sentimentResult.confidence,
+        relevance_score: 95, keywords_matched: query.keywords.filter(k => raw.snippet.includes(k) || raw.title.includes(k)),
+        media_urls: [], engagement: { views: Math.floor(Math.random() * 5000) + 100 },
+        content_classification: 'discussion', capture_status: 'captured', report_ids: [], metadata: {}
       });
-      
-      const html = await response.text();
-      const $ = cheerio.load(html);
-      
-      const elements = $('.result').toArray().slice(0, 10);
-      for (const el of elements) {
-        const title = $(el).find('.result__title').text().trim();
-        const snippet = $(el).find('.result__snippet').text().trim();
-        let url = $(el).find('.result__url').attr('href') || '';
-        
-        if (url.startsWith('//')) url = 'https:' + url;
-
-        if (title && snippet) {
-          const sentimentResult = await analyzeSentimentAsync(snippet, query.aiSettings);
-          
-          results.push({
-            id: this.generateId(),
-            platform: 'youtube',
-            content: snippet,
-            title: title.replace(' - YouTube', ''),
-            author: 'قناة يوتيوب',
-            url: url,
-            published_at: new Date().toISOString(),
-            discovered_at: new Date().toISOString(),
-            sentiment: sentimentResult.sentiment,
-            sentiment_confidence: sentimentResult.confidence,
-            relevance_score: 95,
-            keywords_matched: query.keywords.filter(k => snippet.includes(k) || title.includes(k)),
-            media_urls: [],
-            engagement: { views: Math.floor(Math.random() * 5000) + 100 },
-            content_classification: 'discussion',
-            capture_status: 'captured',
-            report_ids: [],
-            metadata: {}
-          });
-        }
-      }
-    } catch (e) {
-      console.error('[YouTubeConnector] Search failed:', e);
     }
-    
     return results;
   }
 }

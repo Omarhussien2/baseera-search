@@ -3,6 +3,46 @@ import { Platform, MonitoringItem, SearchQuery } from '@/types';
 import * as cheerio from 'cheerio';
 import { analyzeSentimentAsync } from '@/lib/sentiment';
 
+// Unified DuckDuckGo Lite search that works from Vercel serverless
+async function ddgLiteSearch(searchString: string): Promise<{title: string; snippet: string; url: string}[]> {
+  const results: {title: string; snippet: string; url: string}[] = [];
+  
+  try {
+    const response = await fetch('https://lite.duckduckgo.com/lite/', {
+      method: 'POST',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `q=${encodeURIComponent(searchString)}`,
+    });
+    
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    
+    const links = $('a.result-link').toArray();
+    const snippets = $('td.result-snippet').toArray();
+    
+    for (let i = 0; i < Math.min(links.length, 15); i++) {
+      const title = $(links[i]).text().trim();
+      const snippet = snippets[i] ? $(snippets[i]).text().trim() : '';
+      let url = $(links[i]).attr('href') || '';
+      
+      if (url.startsWith('//')) url = 'https:' + url;
+      
+      if (title && (snippet || url)) {
+        results.push({ title, snippet: snippet || title, url });
+      }
+    }
+  } catch (e) {
+    console.error('[ddgLiteSearch] Failed:', e);
+  }
+  
+  return results;
+}
+
+export { ddgLiteSearch };
+
 export class WebConnector extends BaseConnector {
   platform: Platform = 'web';
 
@@ -15,58 +55,33 @@ export class WebConnector extends BaseConnector {
   async search(query: SearchQuery): Promise<MonitoringItem[]> {
     console.log(`[Web] Actual search for: ${query.keywords.join(', ')}`);
     const results: MonitoringItem[] = [];
-    
-    // ربط الكلمات للبحث في محرك البحث
     const searchString = query.keywords.join(' ');
     
-    try {
-      // بنسحب من محرك بحث حقيقي (DuckDuckGo HTML version)
-      const response = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchString)}`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
+    const rawResults = await ddgLiteSearch(searchString);
+    
+    for (const raw of rawResults) {
+      const sentimentResult = await analyzeSentimentAsync(raw.snippet, query.aiSettings);
+      
+      results.push({
+        id: this.generateId(),
+        platform: 'web',
+        content: raw.snippet,
+        title: raw.title,
+        author: 'محرك بحث',
+        url: raw.url,
+        published_at: new Date().toISOString(),
+        discovered_at: new Date().toISOString(),
+        sentiment: sentimentResult.sentiment,
+        sentiment_confidence: sentimentResult.confidence,
+        relevance_score: 90,
+        keywords_matched: query.keywords.filter(k => raw.snippet.includes(k) || raw.title.includes(k)),
+        media_urls: [],
+        engagement: { views: Math.floor(Math.random() * 1000) },
+        content_classification: 'news',
+        capture_status: 'captured',
+        report_ids: [],
+        metadata: {}
       });
-      
-      const html = await response.text();
-      const $ = cheerio.load(html);
-      
-      const elements = $('.result').toArray().slice(0, 15);
-      for (const el of elements) {
-        const title = $(el).find('.result__title').text().trim();
-        const snippet = $(el).find('.result__snippet').text().trim();
-        let url = $(el).find('.result__url').attr('href') || '';
-        
-        // تنظيف الرابط
-        if (url.startsWith('//')) url = 'https:' + url;
-
-        if (title && snippet) {
-          const sentimentResult = await analyzeSentimentAsync(snippet, query.aiSettings);
-          
-          results.push({
-            id: this.generateId(),
-            platform: 'web',
-            content: snippet,
-            title: title,
-            author: 'محرك بحث',
-            url: url,
-            published_at: new Date().toISOString(), // للأسف محركات البحث المجانية مبتوفرش دايما تاريخ دقيق
-            discovered_at: new Date().toISOString(),
-            sentiment: sentimentResult.sentiment,
-            sentiment_confidence: sentimentResult.confidence,
-            relevance_score: 90,
-            keywords_matched: query.keywords.filter(k => snippet.includes(k) || title.includes(k)),
-            media_urls: [],
-            engagement: { views: Math.floor(Math.random() * 1000) },
-            content_classification: 'news',
-            capture_status: 'captured',
-            report_ids: [],
-            metadata: {}
-          });
-        }
-      }
-      
-    } catch (e) {
-      console.error('[WebConnector] Search failed:', e);
     }
     
     return results;
