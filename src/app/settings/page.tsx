@@ -1,0 +1,146 @@
+'use client';
+import { motion } from 'framer-motion';
+import { Settings, Hash, Users, Camera, Globe, BrainCircuit, Key, CheckCircle2, Link2, MessageSquare, Briefcase } from 'lucide-react';
+import { useState } from 'react';
+
+const platforms = [
+  { id: 'twitter', name: 'تويتر (X)', icon: Hash, color: 'text-gray-900 dark:text-gray-100', connected: false },
+  { id: 'facebook', name: 'فيسبوك', icon: Users, color: 'text-blue-600', connected: false },
+  { id: 'instagram', name: 'إنستجرام', icon: Camera, color: 'text-pink-600', connected: false },
+  { id: 'linkedin', name: 'لينكد إن', icon: Briefcase, color: 'text-blue-700', connected: true }, // محاكاة لواحد متصل
+  { id: 'reddit', name: 'ريديت', icon: MessageSquare, color: 'text-orange-500', connected: false },
+];
+
+export default function SettingsPage() {
+  const [aiProvider, setAiProvider] = useState('heuristic');
+  const [connecting, setConnecting] = useState<string | null>(null);
+
+  const handleConnect = async (id: string) => {
+    setConnecting(id);
+    try {
+      const res = await fetch('/api/auth/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: id })
+      });
+      const data = await res.json();
+      if(data.success) {
+        alert(`تم الربط بنجاح مع ${id} ✅`);
+        // In a real app, update the state here to show connected=true
+      } else {
+        alert(`فشل الربط: ${data.error}`);
+      }
+    } catch (e) {
+      alert('حدث خطأ في الاتصال بالسيرفر');
+    }
+    setConnecting(null);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-10 pb-12">
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4">
+        <div className="p-4 bg-gray-100 text-gray-700 rounded-2xl dark:bg-gray-800 dark:text-gray-300">
+          <Settings className="h-7 w-7" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white">ظبّط دنيتك ⚙️</h1>
+          <p className="text-gray-500 font-medium mt-1">اربط حساباتك وفعّل الذكاء الاصطناعي عشان منصتك تشتغل بأقصى طاقة.</p>
+        </div>
+      </motion.div>
+
+      {/* 1. Account Connections */}
+      <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <Link2 className="h-5 w-5 text-brand-500" />
+          ربط المنصات (Connectors)
+        </h2>
+        <div className="bg-white dark:bg-gray-900 rounded-3xl p-2 shadow-sm border border-gray-100 dark:border-gray-800">
+          <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
+            {platforms.map((platform) => (
+              <div key={platform.id} className="flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors first:rounded-t-2xl last:rounded-b-2xl">
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 bg-gray-50 dark:bg-gray-800 rounded-xl ${platform.color}`}>
+                    <platform.icon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white">{platform.name}</h3>
+                    <p className="text-sm text-gray-500 font-medium mt-1">
+                      {platform.connected ? 'الحساب متصل وجاهز للرصد' : 'الحساب مش متصل، مش هنقدر نرصد الداتا'}
+                    </p>
+                  </div>
+                </div>
+                
+                {platform.connected ? (
+                  <button className="flex items-center gap-2 px-5 py-2.5 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 rounded-xl font-bold text-sm border border-green-100 dark:border-green-900/30">
+                    <CheckCircle2 className="h-4 w-4" />
+                    متصل ✅
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => handleConnect(platform.id)}
+                    disabled={connecting === platform.id}
+                    className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-70 shadow-sm"
+                  >
+                    {connecting === platform.id ? 'بيفتح المتصفح... ⏳' : 'اربط حسابك 🔗'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* 2. AI Settings */}
+      <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <BrainCircuit className="h-5 w-5 text-purple-500" />
+          محرك الذكاء الاصطناعي (لتحليل المشاعر)
+        </h2>
+        <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-gray-800 space-y-6">
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label className={`cursor-pointer border-2 rounded-2xl p-5 transition-all ${aiProvider === 'heuristic' ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-100 dark:border-gray-800 hover:border-gray-200'}`}>
+              <input type="radio" name="ai" value="heuristic" checked={aiProvider === 'heuristic'} onChange={() => setAiProvider('heuristic')} className="sr-only" />
+              <h3 className="font-bold text-gray-900 dark:text-white mb-1">قاموس الكلمات (أساسي)</h3>
+              <p className="text-xs text-gray-500 font-medium leading-relaxed">سريع ومجاني، بيعتمد على قاموس مدمج بس دقته متوسطة</p>
+            </label>
+            
+            <label className={`cursor-pointer border-2 rounded-2xl p-5 transition-all ${aiProvider === 'gemini' ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-100 dark:border-gray-800 hover:border-gray-200'}`}>
+              <input type="radio" name="ai" value="gemini" checked={aiProvider === 'gemini'} onChange={() => setAiProvider('gemini')} className="sr-only" />
+              <h3 className="font-bold text-gray-900 dark:text-white mb-1">Google Gemini API</h3>
+              <p className="text-xs text-gray-500 font-medium leading-relaxed">دقة ممتازة وبيدعم اللهجات العربية، بيحتاج مفتاح API</p>
+            </label>
+
+            <label className={`cursor-pointer border-2 rounded-2xl p-5 transition-all ${aiProvider === 'ollama' ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-gray-100 dark:border-gray-800 hover:border-gray-200'}`}>
+              <input type="radio" name="ai" value="ollama" checked={aiProvider === 'ollama'} onChange={() => setAiProvider('ollama')} className="sr-only" />
+              <h3 className="font-bold text-gray-900 dark:text-white mb-1">Local AI (Ollama)</h3>
+              <p className="text-xs text-gray-500 font-medium leading-relaxed">مجاني بالكامل وبيشتغل على جهازك، بيحتاج موارد عالية</p>
+            </label>
+          </div>
+
+          {aiProvider !== 'heuristic' && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">مفتاح الربط (API Key / Local URL)</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                  <Key className="h-5 w-5 text-gray-400 group-focus-within:text-brand-500 transition-colors" />
+                </div>
+                <input 
+                  type="password" 
+                  placeholder={aiProvider === 'gemini' ? "AIzaSy..." : "http://localhost:11434"} 
+                  className="block w-full pl-4 pr-12 py-3.5 border-2 border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-950 focus:ring-0 focus:border-brand-500 font-medium text-gray-900 dark:text-white transition-colors"
+                />
+              </div>
+            </motion.div>
+          )}
+
+          <div className="flex justify-end pt-4">
+            <button className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-8 py-3.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity">
+              حفظ الإعدادات 💾
+            </button>
+          </div>
+        </div>
+      </motion.section>
+    </div>
+  );
+}
