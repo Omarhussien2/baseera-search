@@ -1,6 +1,6 @@
 import { BaseConnector } from './base';
 import { Platform, MonitoringItem, SearchQuery } from '@/types';
-import { bingSearch } from './web';
+import { apifyGoogleSearch } from './web';
 import { analyzeSentimentAsync } from '@/lib/sentiment';
 
 export class RedditConnector extends BaseConnector {
@@ -10,7 +10,7 @@ export class RedditConnector extends BaseConnector {
 
   async search(query: SearchQuery): Promise<MonitoringItem[]> {
     const results: MonitoringItem[] = [];
-    const rawResults = await bingSearch(`reddit ${query.keywords.join(' ')}`);
+    const rawResults = await apifyGoogleSearch(`site:reddit.com ${query.keywords.join(' ')}`);
     for (const raw of rawResults) {
       const sentimentResult = await analyzeSentimentAsync(raw.snippet, query.aiSettings);
       results.push({

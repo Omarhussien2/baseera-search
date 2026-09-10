@@ -26,6 +26,7 @@ if (registry.getAll().length === 0) {
 }
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 const app = new Hono().basePath('/api');
 const store = getStore();

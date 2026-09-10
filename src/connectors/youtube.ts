@@ -1,6 +1,6 @@
 import { BaseConnector } from './base';
 import { Platform, MonitoringItem, SearchQuery } from '@/types';
-import { bingSearch } from './web';
+import { apifyGoogleSearch } from './web';
 import { analyzeSentimentAsync } from '@/lib/sentiment';
 
 export class YouTubeConnector extends BaseConnector {
@@ -10,7 +10,7 @@ export class YouTubeConnector extends BaseConnector {
 
   async search(query: SearchQuery): Promise<MonitoringItem[]> {
     const results: MonitoringItem[] = [];
-    const rawResults = await bingSearch(`youtube ${query.keywords.join(' ')}`);
+    const rawResults = await apifyGoogleSearch(`site:youtube.com ${query.keywords.join(' ')}`);
     
     for (const raw of rawResults) {
       const sentimentResult = await analyzeSentimentAsync(raw.snippet, query.aiSettings);

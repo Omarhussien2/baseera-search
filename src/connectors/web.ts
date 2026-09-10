@@ -3,7 +3,55 @@ import { Platform, MonitoringItem, SearchQuery } from '@/types';
 import * as cheerio from 'cheerio';
 import { analyzeSentimentAsync } from '@/lib/sentiment';
 
-// Unified Bing search that works flawlessly from Vercel serverless
+// Apify Google Search (Uses actual Google, respects site: operators, doesn't block)
+export async function apifyGoogleSearch(searchString: string): Promise<{title: string; snippet: string; url: string}[]> {
+  const token = process.env.APIF_API_TOKEN;
+  if (!token) return bingSearch(searchString);
+
+  console.log(`[Apify] Searching Google for: ${searchString}`);
+  try {
+    const response = await fetch(`https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token=${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        queries: searchString,
+        maxPagesPerQuery: 1,
+        resultsPerPage: 15,
+        languageCode: "ar",
+        countryCode: "eg"
+      }),
+      cache: 'no-store'
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const results: {title: string; snippet: string; url: string}[] = [];
+      
+      // Apify google-search-scraper returns an array of items (one per query usually)
+      for (const item of data) {
+        if (item.organicResults) {
+          for (const org of item.organicResults) {
+            results.push({
+              title: org.title,
+              snippet: org.description || org.title,
+              url: org.url
+            });
+          }
+        }
+      }
+      return results;
+    } else {
+      console.error('[Apify] Failed with status:', response.status);
+    }
+  } catch (e) {
+    console.error('[Apify] Error:', e);
+  }
+
+  // Fallback to Bing if Apify fails
+  return bingSearch(searchString);
+}
+
+// Unified Bing search that works flawlessly from Vercel serverless (used as fallback)
 export async function bingSearch(searchString: string): Promise<{title: string; snippet: string; url: string}[]> {
   const results: {title: string; snippet: string; url: string}[] = [];
   
@@ -65,7 +113,7 @@ export class WebConnector extends BaseConnector {
     const results: MonitoringItem[] = [];
     const searchString = query.keywords.join(' ');
     
-    const rawResults = await bingSearch(searchString);
+    const rawResults = await apifyGoogleSearch(searchString);
     
     for (const raw of rawResults) {
       const sentimentResult = await analyzeSentimentAsync(raw.snippet, query.aiSettings);
