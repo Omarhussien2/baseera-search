@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       status,
       htmlLength: html.length,
-      htmlSnippet: html.substring(0, 500),
+      htmlSnippet: html,
       parsedResults: rawResults
     });
   } catch (e: any) {
