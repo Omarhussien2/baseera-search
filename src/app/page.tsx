@@ -1,100 +1,55 @@
+'use client';
+import { motion } from 'framer-motion';
+import { FileText, Calendar, Radio, Bell, Search, Activity } from 'lucide-react';
+import Link from 'next/link';
+
 const statCards = [
-  { label: 'مواد اليوم', value: '0', icon: '📄', color: 'text-blue-600' },
-  { label: 'مواد الأسبوع', value: '0', icon: '📅', color: 'text-green-600' },
-  { label: 'ملفات رصد نشطة', value: '0', icon: '📡', color: 'text-purple-600' },
-  { label: 'تنبيهات جديدة', value: '0', icon: '🔔', color: 'text-orange-600' },
+  { label: 'مواد لقطناها النهاردة', value: '0', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+  { label: 'حصيلة الأسبوع ده', value: '0', icon: Calendar, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
+  { label: 'ملفات رصد شغالة', value: '0', icon: Radio, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+  { label: 'تنبيهات بتنادي عليك', value: '0', icon: Bell, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
 ];
 
-const connectors = [
-  { name: 'المواقع الإلكترونية', platform: 'web', status: true, icon: '🌐' },
-  { name: 'RSS', platform: 'rss', status: true, icon: '📰' },
-  { name: 'تويتر / X', platform: 'twitter', status: false, icon: '🐦' },
-  { name: 'يوتيوب', platform: 'youtube', status: false, icon: '📺' },
-  { name: 'فيسبوك', platform: 'facebook', status: false, icon: '📘' },
-  { name: 'إنستاغرام', platform: 'instagram', status: false, icon: '📷' },
-  { name: 'ريديت', platform: 'reddit', status: false, icon: '💬' },
-  { name: 'لينكدإن', platform: 'linkedin', status: false, icon: '💼' },
-];
+const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-brand-900 dark:text-brand-200">
-          بصيرة
-        </h1>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">
-          منصة البحث والرصد الإعلامي على الإنترنت
-        </p>
-      </div>
+    <div className="space-y-10">
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+        <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">يا هلا بيك في بصيرة! 👋</h1>
+        <p className="mt-3 text-lg text-gray-500 dark:text-gray-400 font-medium">إيه الأخبار النهاردة؟ دي لفة سريعة على كل اللي بيحصل حواليك.</p>
+      </motion.div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((card) => (
-          <div key={card.label} className="stat-card">
+      <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {statCards.map((card, idx) => (
+          <motion.div key={idx} variants={item} whileHover={{ y: -5 }} className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm transition-shadow hover:shadow-md cursor-default">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
-                <p className={`mt-1 text-3xl font-bold ${card.color}`}>{card.value}</p>
+                <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{card.label}</p>
+                <p className="mt-2 text-4xl font-black text-gray-900 dark:text-white">{card.value}</p>
               </div>
-              <span className="text-3xl">{card.icon}</span>
+              <div className={`p-4 rounded-2xl ${card.bg}`}>
+                <card.icon className={`h-7 w-7 ${card.color}`} />
+              </div>
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
-      {/* Connectors Status */}
-      <div>
-        <h2 className="mb-4 text-xl font-semibold text-gray-800 dark:text-gray-200">
-          حالة الموصلات
-        </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {connectors.map((c) => (
-            <div
-              key={c.platform}
-              className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900"
-            >
-              <span className="text-2xl">{c.icon}</span>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                  {c.name}
-                </p>
-                <p className={`text-xs ${c.status ? 'text-green-600' : 'text-gray-400'}`}>
-                  {c.status ? '✅ متصل' : '⬚ غير مهيأ'}
-                </p>
-              </div>
-            </div>
-          ))}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        <h2 className="mb-5 text-2xl font-bold text-gray-900 dark:text-white">إنجز حالك بسرعة ⚡</h2>
+        <div className="flex flex-wrap gap-4">
+          <Link href="/search" className="rounded-2xl bg-brand-600 px-8 py-4 text-base font-bold text-white shadow-sm hover:bg-brand-700 transition-all hover:shadow-md hover:-translate-y-1 flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            <span>دوّر على حاجة</span>
+          </Link>
+          <Link href="/feed" className="rounded-2xl border-2 border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-8 py-4 text-base font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all hover:-translate-y-1 flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            <span>شوف الرصد الحي</span>
+          </Link>
         </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div>
-        <h2 className="mb-4 text-xl font-semibold text-gray-800 dark:text-gray-200">
-          إجراءات سريعة
-        </h2>
-        <div className="flex flex-wrap gap-3">
-          <a
-            href="/search"
-            className="rounded-lg bg-brand-900 px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-800"
-          >
-            🔍 بحث جديد
-          </a>
-          <a
-            href="/feed"
-            className="rounded-lg border border-brand-900 px-6 py-3 text-sm font-medium text-brand-900 transition-colors hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400"
-          >
-            📡 الرصد الحي
-          </a>
-          <a
-            href="/reports"
-            className="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300"
-          >
-            📊 التقارير
-          </a>
-        </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
